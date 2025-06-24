@@ -258,7 +258,7 @@ ashita.events.register('command', 'command_cb', function (e)
 
 	-- Parse the command arguments
 	local command_args = e.command:lower():args()
-    if table.contains({'/hitpoints', '/hpoints', '/hp'}, command_args[1]) then
+    if table.contains({'/hitpoints', '/hpoints'}, command_args[1]) then
 		-- Toggle the config menu
 		gShowConfig[1] = not gShowConfig[1];
 		e.blocked = true;
