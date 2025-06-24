@@ -8,6 +8,10 @@ local bgAlpha = 0.4;
 local bgRadius = 3;
 local engaged = {};
 
+local scrollOffsets = {} -- store scroll offset per enemy key
+local scrollSpeed = 30   -- pixels per second
+local scrollPause = 1.5  -- seconds to pause at start/end
+
 local debugBuffIds = T{};
 for i = 1, 32 do
 	local buff = nil
@@ -92,7 +96,7 @@ engaged.DrawWindow = function()
 			if (ent == nil and gShowConfig[1]) then
 				ent = GetPlayerEntity();
 			end
-			if (v ~= nil and ent ~= nil and GetIsValidMob(k)) then
+			if (v ~= nil and ent ~= nil and GetIsValidMob(k) and ent.HPPercent > 0) then
 				-- Obtain and prepare target information..
 				local targetNameText = ent.Name;
 				if (targetNameText ~= nil) then
@@ -122,8 +126,52 @@ engaged.DrawWindow = function()
 						draw_rect({winX + cornerOffset, winY + cornerOffset}, {winX + rectLength - 1, winY + yDist + engagedSettings.bgPadding}, {1,1,1,1}, bgRadius, false);
 					end
 
-					-- Display the targets information..
-					imgui.TextColored(color, targetNameText);
+                	-- Display the targets information..
+                	local paddingX = 4
+                	local availableWidth = rectLength - cornerOffset - paddingX * 2
+                	local textWidth, _ = imgui.CalcTextSize(targetNameText)
+
+                	if textWidth > availableWidth then
+                	    -- init scroll offset if nil
+                	    if scrollOffsets[k] == nil then
+                	        scrollOffsets[k] = 0
+                	        scrollOffsets[k .. "_dir"] = 1 -- scroll direction: 1 = right, -1 = left
+                	        scrollOffsets[k .. "_pause"] = 0
+                	    end
+
+                	    local dt = imgui.GetIO().DeltaTime
+                	    local offset = scrollOffsets[k]
+                	    local dir = scrollOffsets[k .. "_dir"]
+                	    local pause = scrollOffsets[k .. "_pause"]
+
+                	    if pause > 0 then
+                	        scrollOffsets[k .. "_pause"] = pause - dt
+                	    else
+                	        offset = offset + dir * scrollSpeed * dt
+
+                	        -- If scrolled all the way to the end, pause and reverse
+                	        if offset > (textWidth - availableWidth) then
+                	            offset = textWidth - availableWidth
+                	            scrollOffsets[k .. "_pause"] = scrollPause
+                	            scrollOffsets[k .. "_dir"] = -1
+                	        elseif offset < 0 then
+                	            offset = 0
+                	            scrollOffsets[k .. "_pause"] = scrollPause
+                	            scrollOffsets[k .. "_dir"] = 1
+                	        end
+
+                	        scrollOffsets[k] = offset
+                	    end
+
+                	    -- Set cursor pos X with negative offset to scroll left
+                	    local cursorX = imgui.GetCursorPosX()
+                	    imgui.SetCursorPosX(cursorX + paddingX - offset)
+                	    imgui.TextColored(color, targetNameText)
+                	    imgui.SetCursorPosX(cursorX) -- reset for next items
+                	else
+                	    -- no scrolling needed
+                	    imgui.TextColored(color, targetNameText)
+                	end
 					local percentText  = ('%.f'):fmt(ent.HPPercent);
 					local x, _  = imgui.CalcTextSize(percentText);
 					local fauxX, _  = imgui.CalcTextSize('100');
