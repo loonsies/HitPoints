@@ -221,9 +221,9 @@ engaged.DrawWindow = function()
 				end
 			end
 		end
-		imgui.PopFont()
 	end
 	imgui.End();
+	imgui.PopFont();
 end
 
 --[[
